@@ -1,50 +1,80 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // For navigation after signup
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import './Login.css';
 
 function SignUp() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    }
+  });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
 
-    if (!name || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
+    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword || !formData.phone) {
+      setError('Please fill in all required fields');
+      setLoading(false);
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      setLoading(false);
       return;
     }
 
-    // Make API call to register the user here
     try {
-      const response = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      if (!response.ok) {
-        setError('Something went wrong. Please try again.');
+      const { confirmPassword, ...userData } = formData;
+      const result = await register(userData);
+      if (result.success) {
+        navigate('/login');
       } else {
-        const data = await response.json();
-        // Handle successful signup (e.g., store user token, navigate to login)
-        localStorage.setItem('userToken', data.token); // Example for storing a token
-        navigate('/login'); // Redirect to login page after successful signup
+        setError(result.error || 'Something went wrong. Please try again.');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="signup-container">
+    <div className="login-container">
       <h2>Sign Up</h2>
       {error && <p className="error-message">{error}</p>}
       <form onSubmit={handleSubmit}>
@@ -53,9 +83,11 @@ function SignUp() {
           <input
             type="text"
             id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
             placeholder="Enter your name"
+            required
           />
         </div>
         <div className="input-group">
@@ -63,9 +95,23 @@ function SignUp() {
           <input
             type="email"
             id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
             placeholder="Enter your email"
+            required
+          />
+        </div>
+        <div className="input-group">
+          <label htmlFor="phone">Phone</label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="Enter your phone number"
+            required
           />
         </div>
         <div className="input-group">
@@ -73,9 +119,11 @@ function SignUp() {
           <input
             type="password"
             id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
             placeholder="Enter your password"
+            required
           />
         </div>
         <div className="input-group">
@@ -83,18 +131,66 @@ function SignUp() {
           <input
             type="password"
             id="confirmPassword"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
             placeholder="Confirm your password"
+            required
           />
         </div>
-        <button type="submit">Sign Up</button>
+        <div className="input-group">
+          <label htmlFor="address.street">Street Address</label>
+          <input
+            type="text"
+            id="address.street"
+            name="address.street"
+            value={formData.address.street}
+            onChange={handleChange}
+            placeholder="Enter your street address"
+          />
+        </div>
+        <div className="input-group">
+          <label htmlFor="address.city">City</label>
+          <input
+            type="text"
+            id="address.city"
+            name="address.city"
+            value={formData.address.city}
+            onChange={handleChange}
+            placeholder="Enter your city"
+          />
+        </div>
+        <div className="input-group">
+          <label htmlFor="address.state">State</label>
+          <input
+            type="text"
+            id="address.state"
+            name="address.state"
+            value={formData.address.state}
+            onChange={handleChange}
+            placeholder="Enter your state"
+          />
+        </div>
+        <div className="input-group">
+          <label htmlFor="address.zipCode">ZIP Code</label>
+          <input
+            type="text"
+            id="address.zipCode"
+            name="address.zipCode"
+            value={formData.address.zipCode}
+            onChange={handleChange}
+            placeholder="Enter your ZIP code"
+          />
+        </div>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Signing up...' : 'Sign Up'}
+        </button>
       </form>
       <div className="links">
-        <p>Already have an account? <a href="/login">Login</a></p>
+        <p>Already have an account? <Link to="/login">Login</Link></p>
       </div>
     </div>
   );
 }
 
-export default SignUp
+export default SignUp;

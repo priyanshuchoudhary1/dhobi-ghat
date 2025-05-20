@@ -1,40 +1,62 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // For navigation after login
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
 
     if (!email || !password) {
       setError('Please fill in both fields');
+      setLoading(false);
       return;
     }
 
-    // Make API call to authenticate the user here
     try {
-      // Assuming you have an API that validates the login credentials
-      const response = await fetch('/api/login', {
+      console.log('Attempting to log in with email:', email);
+      const response = await fetch('http://localhost:4000/api/users/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('Login response status:', response.status);
+      const data = await response.json();
+      console.log('Login response data:', data);
+
       if (!response.ok) {
-        setError('Invalid email or password');
-      } else {
-        const data = await response.json();
-        // Store the user token or session and redirect to a new page
-        localStorage.setItem('userToken', data.token); // Example for storing a token
-        navigate('/home'); // Redirect after successful login
+        throw new Error(data.message || 'Login failed');
       }
+
+      if (!data.user) {
+        throw new Error('Invalid user data received from server');
+      }
+
+      // Store token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userId', data.userId);
+      localStorage.setItem('userData', JSON.stringify(data.user));
+
+      // Update auth context
+      login(data.user, data.token);
+      navigate('/');
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to log in');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,6 +73,7 @@ function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
+            required
           />
         </div>
         <div className="input-group">
@@ -61,13 +84,16 @@ function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
+            required
           />
         </div>
-        <button type="submit">Login</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
       </form>
       <div className="links">
-        <a href="/forgot-password">Forgot Password?</a>
-        <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+        <Link to="/forgot-password">Forgot Password?</Link>
+        <p>Don't have an account? <Link to="/signup">Sign Up</Link></p>
       </div>
     </div>
   );

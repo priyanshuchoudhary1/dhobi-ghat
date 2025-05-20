@@ -7,16 +7,18 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (item) => {
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find((i) => i.id === item.id);  // Compare using item.id
+      const existingItem = prevItems.find(
+        (i) => i.name === item.name && i.category === item.category
+      );
 
       if (existingItem) {
         return prevItems.map((i) =>
-          i.id === item.id
-            ? { ...i, quantity: i.quantity + 1 }  // Increase quantity if item exists
+          i.name === item.name && i.category === item.category
+            ? { ...i, quantity: i.quantity + item.quantity }
             : i
         );
       } else {
-        return [...prevItems, { ...item, quantity: 1 }];  // Add new item with quantity 1
+        return [...prevItems, { ...item, quantity: item.quantity }];
       }
     });
   };
@@ -33,14 +35,20 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  const deleteItem = (itemId) => {
+  const deleteItem = (itemName, itemCategory) => {
     setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id !== itemId)  // Delete item based on id
+      prevItems.filter(
+        (item) => !(item.name === itemName && item.category === itemCategory)
+      )
     );
   };
 
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, deleteItem }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, deleteItem, clearCart }}>
       {children}
     </CartContext.Provider>
   );
